@@ -1,0 +1,41 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>org.jvnet.hudson.plugins</groupId>
+    <artifactId>plugin</artifactId>
+    <version>1.330</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+  
+  <artifactId>clearcase-release</artifactId>
+  <packaging>hpi</packaging>
+  <name>Hudson ClearCase Release Plug-in</name>
+  <version>0.1-SNAPSHOT</version>
+  <url>http://wiki.hudson-ci.org/display/HUDSON/ClearCase+Release+Plugin</url>
+  <licenses>
+    <license>
+      <name>MIT license</name>
+      <comments>All source code is under the MIT license.</comments>
+    </license>
+  </licenses>
+
+   <developers>
+      <developer>
+         <id>gbois</id>
+         <name>Gregory Boissinot</name>
+         <email>gregory.boissinot@gmail.com</email>
+         <timezone>+1</timezone>
+      </developer>
+   </developers>
+
+
+   <dependencies>
+      <dependency>
+         <groupId>org.jvnet.hudson.plugins</groupId>
+         <artifactId>clearcase</artifactId>
+         <version>1.0.2-thales</version> 
+      </dependency>
+   </dependencies>
+
+
+</project>

@@ -1,0 +1,277 @@
+/*******************************************************************************
+ * Copyright (c) 2009 Thales Corporate Services SAS                             *
+ * Author : Gregory Boissinot                                                   *
+ *                                                                              *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy *
+ * of this software and associated documentation files (the "Software"), to deal*
+ * in the Software without restriction, including without limitation the rights *
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell    *
+ * copies of the Software, and to permit persons to whom the Software is        *
+ * furnished to do so, subject to the following conditions:                     *
+ *                                                                              *
+ * The above copyright notice and this permission notice shall be included in   *
+ * all copies or substantial portions of the Software.                          *
+ *                                                                              *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR   *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,     *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE  *
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER       *
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,*
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN    *
+ * THE SOFTWARE.                                                                *
+ *******************************************************************************/
+
+package com.thalesgroup.hudson.plugins.clearcaserelease;
+
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.model.AbstractProject;
+import hudson.model.Run;
+import hudson.model.TaskListener;
+import hudson.model.TaskThread;
+import hudson.plugins.clearcase.ClearCaseUcmSCM;
+import hudson.plugins.clearcase.HudsonClearToolLauncher;
+import hudson.scm.SCM;
+import hudson.security.ACL;
+import hudson.security.Permission;
+import hudson.util.ArgumentListBuilder;
+import org.kohsuke.stapler.StaplerRequest;
+import org.kohsuke.stapler.StaplerResponse;
+
+import javax.servlet.ServletException;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+
+/**
+ * Represents the latest baselines release action
+ */
+public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction {
+
+    private final AbstractProject project;
+
+
+    public ClearcaseReleaseLatestBaselineAction(AbstractProject project) {
+
+        super(project.getWorkspace());
+        this.project = project;
+    }
+
+    @SuppressWarnings("unused")
+    public Run getOwner() {
+        return project.getLastSuccessfulBuild();
+    }
+
+    public String getUrlName() {
+        return "clearcasereleaselatestbaseline";
+    }
+
+    protected Permission getPermission() {
+        return SCM.TAG;
+    }
+
+    public String getIconFileName() {
+        //TODO Check if the composite baseline is already promoted to RELEASED (saved filed or clearcase request)
+        Run lastBuild = project.getLastBuild();
+        if (lastBuild != null && ClearcaseReleaseBuildWrapper.hasReleasePermission(project)) {
+            return "installer.gif";
+        }
+        // by returning null the link will not be shown.
+        return null;
+    }
+
+
+    public String getDisplayName() {
+        return Messages.ReleaseAction_perform_latestBaselines_name();
+    }
+
+    protected ACL getACL() {
+        return project.getLastSuccessfulBuild().getACL();
+    }
+
+
+    /**
+     * Get the read/write components for a given stream
+     * @param streamPVOB  the stream name with the P_VOB
+     * @param clearToolLauncher the clearcase launcher object
+     * @param filePath the location where to launch the clearcase command
+     * @return the component name
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    /*
+    cleartool lsstream -fmt "%[mod_comps]CXp" P_LinkMgt_V4.0.0_int@\P_ORC
+    -->component:TracMgt_Rqtf_QueryGen@\P_ORC, component:PapeeteReqtifyConnector@\P_ORC, component:LinkMgt_Reqtify@\P_ORC
+    */
+    private List<String> getModComponentsFromStream(
+            String streamPVOB,
+            HudsonClearToolLauncher clearToolLauncher,
+            FilePath filePath)
+            throws IOException, InterruptedException {
+
+        ArgumentListBuilder cmd = new ArgumentListBuilder();
+        cmd.add("lsstream");
+        cmd.add("-fmt");
+        cmd.add("\"%[mod_comps]p\"");
+        cmd.add(streamPVOB);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        clearToolLauncher.run(cmd.toCommandArray(), null, baos, filePath);
+        baos.close();
+
+        String reusltClt = baos.toString();
+        return Arrays.asList(reusltClt.split(" "));
+    }
+
+
+    /**
+     * Get the latest baselines for a given stream
+     *
+     * @param streanWithPVOB    an UCM stream concatened with the PVOB
+     * @param clearToolLauncher the clercase object launcher
+     * @param filePath          the location  where to launch the clearcase command
+     * @return the list of baseline name
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    /*
+    cleartool lsstream -fmt "%[latest_bls]CXp" P_LinkMgt_V4.0.0_int@\P_ORC
+    -->
+    baseline:P_TracMngt_Rqtf_CoreModel_V3.0.1@\P_ORC,
+    baseline:LinkManager-4.3.0-2009-10-29_11-03-52.9990@\P_ORC,
+    baseline:LinkManager-4.3.0-2009-10-29_11-03-52.2547@\P_ORC,
+    baseline:LinkManager-4.3.0-2009-10-29_11-03-52@\P_ORC
+    */
+    private List<String> getLatestBaselines(
+            String streanWithPVOB,
+            HudsonClearToolLauncher clearToolLauncher,
+            FilePath filePath)
+            throws IOException, InterruptedException {
+
+        ArgumentListBuilder cmd = new ArgumentListBuilder();
+        cmd.add("lsstream");
+        cmd.add("-fmt");
+        cmd.add("\"[latest_bls]p\"");
+        cmd.add(streanWithPVOB);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        clearToolLauncher.run(cmd.toCommandArray(), null, baos, filePath);
+        baos.close();
+
+        String reusltClt = baos.toString();
+        return Arrays.asList(reusltClt.split(" "));
+    }
+
+
+    /**
+     * Get the component for a given baseline
+     *
+     * @param baseLineWithPVOB  the given baseline name concatened with the PVOB
+     * @param clearToolLauncher the clearcase launcher object
+     * @param filePath          the location where to launch the clearcase command
+     * @return the component object
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    //cleartool lsbl -fmt "%[component]p" P_TracMngt_Rqtf_CoreModel_V3.0.1@\P_ORC
+    //TracMgt_Rqtf_CoreModel
+    private String getComponentFromBaseline(
+            String baseLineWithPVOB,
+            HudsonClearToolLauncher clearToolLauncher,
+            FilePath filePath)
+            throws IOException, InterruptedException {
+
+
+        ArgumentListBuilder cmd = new ArgumentListBuilder();
+        cmd.add("lsstream");
+        cmd.add("-fmt");
+        cmd.add("\"%[component]p\"");
+        cmd.add(baseLineWithPVOB);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        clearToolLauncher.run(cmd.toCommandArray(), null, baos, filePath);
+        baos.close();
+
+        String componentName = baos.toString();
+        return componentName;
+    }
+
+
+    @SuppressWarnings("unused")
+    public synchronized void doSubmit(StaplerRequest req, StaplerResponse resp) throws IOException, ServletException, InterruptedException {
+
+        // verify permission
+        ClearcaseReleaseBuildWrapper.checkReleasePermission(project);
+
+        SCM scm = project.getScm();
+        if (scm instanceof ClearCaseUcmSCM) {
+            ClearCaseUcmSCM clearCaseUcmSCM = (ClearCaseUcmSCM) scm;
+            new TagWorkerThread(project.getLastBuild(), clearCaseUcmSCM).start();
+        }
+
+        doIndex(req, resp);
+    }
+
+    /**
+     * The thread that performs tagging operation asynchronously.
+     */
+    public final class TagWorkerThread extends TaskThread {
+
+        private final Run owner;
+        private final ClearCaseUcmSCM clearCaseUcmSCM;
+
+        public TagWorkerThread(Run owner, ClearCaseUcmSCM clearCaseUcmSCM) {
+            super(ClearcaseReleaseLatestBaselineAction.this, ListenerAndText.forMemory());
+            this.owner = owner;
+            this.clearCaseUcmSCM = clearCaseUcmSCM;
+        }
+
+        @Override
+        protected void perform(TaskListener listener) {
+            try {
+                listener.getLogger().println("Performing the release of the latest baselines");
+
+                String stream = clearCaseUcmSCM.getStream();
+                String pvob = stream;
+                if (pvob.contains("@" + File.separator)) {
+                    pvob = pvob.substring(pvob.indexOf("@" + File.separator) + 2, pvob.length());
+                }
+
+                Launcher launcher = new Launcher.LocalLauncher(listener);
+                HudsonClearToolLauncher clearToolLauncher = getHudsonClearToolLauncher(listener, launcher);
+
+                //Get all the latest baselines
+                List<String> latestBaselines = getLatestBaselines(stream, clearToolLauncher, workspaceRoot);
+
+                //Get the read/write components
+                List<String> modComps = getModComponentsFromStream(stream, clearToolLauncher, workspaceRoot);
+
+                //Filtering
+                List<String> keepBaselines = new ArrayList<String>();
+                for (String latestBaseline : latestBaselines) {
+
+                    //Retrieve the component of the baseline
+                    String comp = getComponentFromBaseline(latestBaseline, clearToolLauncher, workspaceRoot);
+
+                    //Keep on the a modifiable component
+                    if (modComps.contains(comp)) {
+                        keepBaselines.add(latestBaseline);
+                    }
+                }
+
+                //Promotion to RELEASED all the latest baseline on modifiable component
+                for (String latestBaseline : keepBaselines) {
+                    promoteCompositeBaselineToReleasedLevel(latestBaseline, pvob, clearToolLauncher, workspaceRoot);
+                }
+
+            } catch (Throwable e) {
+                e.printStackTrace(listener.fatalError(e.getMessage()));
+            }
+        }
+    }
+
+}

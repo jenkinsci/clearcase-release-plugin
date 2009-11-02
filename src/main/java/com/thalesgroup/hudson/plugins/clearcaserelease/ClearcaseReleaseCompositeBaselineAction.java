@@ -143,7 +143,7 @@ public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAct
 
                     //Promote to RELEASED the compiste baseline
                     listener.getLogger().println("Promote to RELEASED the composite baseline '"+  compositeBaseLine + "'");
-                    promoteCompositeBaselineToReleasedLevel(compositeBaseLine, pvob, clearToolLauncher, owner.getWorkspace());
+                    promoteCompositeBaselineToReleasedLevel(compositeBaseLine + "@\\" + pvob, clearToolLauncher, owner.getWorkspace());
 
                     //Add a badge icon
                     String compositeBaseNameDescription = compositeBaseLine + ":RELEASED";

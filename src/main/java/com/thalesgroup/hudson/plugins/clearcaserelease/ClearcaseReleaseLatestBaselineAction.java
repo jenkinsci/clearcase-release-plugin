@@ -96,9 +96,10 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
 
     /**
      * Get the read/write components for a given stream
-     * @param streamPVOB  the stream name with the P_VOB
+     *
+     * @param streamPVOB        the stream name with the P_VOB
      * @param clearToolLauncher the clearcase launcher object
-     * @param filePath the location where to launch the clearcase command
+     * @param filePath          the location where to launch the clearcase command
      * @return the component name
      * @throws IOException
      * @throws InterruptedException
@@ -139,7 +140,7 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
      * @throws InterruptedException
      */
     /*
-    cleartool lsstream -fmt "%[latest_bls]CXp" P_LinkMgt_V4.0.0_int@\P_ORC
+    cleartool lsstream -fmt "%[latest_bls]p" P_LinkMgt_V4.0.0_int@\P_ORC
     -->
     baseline:P_TracMngt_Rqtf_CoreModel_V3.0.1@\P_ORC,
     baseline:LinkManager-4.3.0-2009-10-29_11-03-52.9990@\P_ORC,
@@ -155,15 +156,19 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
         ArgumentListBuilder cmd = new ArgumentListBuilder();
         cmd.add("lsstream");
         cmd.add("-fmt");
-        cmd.add("\"[latest_bls]p\"");
+        cmd.add("\"%[latest_bls]CXp\"");
         cmd.add(streanWithPVOB);
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         clearToolLauncher.run(cmd.toCommandArray(), null, baos, filePath);
         baos.close();
+        String resultClt = baos.toString();
 
-        String reusltClt = baos.toString();
-        return Arrays.asList(reusltClt.split(" "));
+        //Remove the 'baseline:' prefix
+        resultClt = resultClt.replace("baseline:", "");
+
+        //Slit the result. Within the result, each result has a space.
+        return Arrays.asList(resultClt.split(", "));
     }
 
 
@@ -187,7 +192,7 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
 
 
         ArgumentListBuilder cmd = new ArgumentListBuilder();
-        cmd.add("lsstream");
+        cmd.add("lsbl");
         cmd.add("-fmt");
         cmd.add("\"%[component]p\"");
         cmd.add(baseLineWithPVOB);
@@ -235,8 +240,8 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
             try {
                 listener.getLogger().println("Performing the release of the latest baselines");
 
-                String stream = clearCaseUcmSCM.getStream();
-                String pvob = stream;
+                String streamWithPVOB = clearCaseUcmSCM.getStream();
+                String pvob = streamWithPVOB;
                 if (pvob.contains("@" + File.separator)) {
                     pvob = pvob.substring(pvob.indexOf("@" + File.separator) + 2, pvob.length());
                 }
@@ -245,10 +250,10 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
                 HudsonClearToolLauncher clearToolLauncher = getHudsonClearToolLauncher(listener, launcher);
 
                 //Get all the latest baselines
-                List<String> latestBaselines = getLatestBaselines(stream, clearToolLauncher, workspaceRoot);
+                List<String> latestBaselines = getLatestBaselines(streamWithPVOB, clearToolLauncher, workspaceRoot);
 
                 //Get the read/write components
-                List<String> modComps = getModComponentsFromStream(stream, clearToolLauncher, workspaceRoot);
+                List<String> modComps = getModComponentsFromStream(streamWithPVOB, clearToolLauncher, workspaceRoot);
 
                 //Filtering
                 List<String> keepBaselines = new ArrayList<String>();
@@ -264,9 +269,25 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
                 }
 
                 //Promotion to RELEASED all the latest baseline on modifiable component
-                for (String latestBaseline : keepBaselines) {
-                    promoteCompositeBaselineToReleasedLevel(latestBaseline, pvob, clearToolLauncher, workspaceRoot);
+                for (String latestBaselineWithPVOB : keepBaselines) {
+                    promoteCompositeBaselineToReleasedLevel(latestBaselineWithPVOB, clearToolLauncher, workspaceRoot);
                 }
+
+                //Add a badge icon
+                String compositeBaseNameDescription = "The latest baseline has been RELEASED";
+                owner.addAction(new ClearcaseReleaseBuildBadgeAction(compositeBaseNameDescription));
+
+                // Keep the build
+                owner.keepLog();
+
+                //Set a build description
+                owner.setDescription(compositeBaseNameDescription);
+
+                //Save the the build information
+                owner.save();
+
+                //reset the worker thread
+                workerThread = null;
 
             } catch (Throwable e) {
                 e.printStackTrace(listener.fatalError(e.getMessage()));

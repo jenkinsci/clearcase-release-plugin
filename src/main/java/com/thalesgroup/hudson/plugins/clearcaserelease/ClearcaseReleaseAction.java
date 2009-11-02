@@ -120,8 +120,7 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
 
     /**
      * Promote an UCM  baseline (composite or not) to RELEASED
-     * @param baselineName the given baseline without the P_VOB
-     * @param pvob the Clearcase P_VOB
+     * @param baselineNameWithPVOB the given baseline with the P_VOB
      * @param clearToolLauncher  the clearcase object launcher
      * @param filePath the location where to launch the clearcase coommand
      * @throws InterruptedException
@@ -129,7 +128,7 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
      */
     //cleartool chbl -level RELEASED C_hudson-test-2_2009-10-29_18-36-07@\P_ORC
     protected void promoteCompositeBaselineToReleasedLevel
-            (String baselineName, String pvob,
+            (String baselineNameWithPVOB,
              HudsonClearToolLauncher clearToolLauncher, FilePath filePath)
             throws InterruptedException, IOException {
 
@@ -137,7 +136,7 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
         cmd.add("chbl");
         cmd.add("-level");
         cmd.add("RELEASED");
-        cmd.add(baselineName + "@" + File.separator + pvob);
+        cmd.add(baselineNameWithPVOB);
 
         clearToolLauncher.run(cmd.toCommandArray(), null, null, filePath);
     }

@@ -28,7 +28,7 @@
 			<f:form method="post" action="submit">
 				<f:section title="Perform Clearcase Release">
 					<tr><td colspan="4" align="left">
-					<f:submit value="${%Schedule Clearcase Release Latest baselines}"/>
+					<f:submit value="${%Schedule Clearcase Latest baselines Release}"/>
 					</td></tr>
 				</f:section>
 			</f:form>

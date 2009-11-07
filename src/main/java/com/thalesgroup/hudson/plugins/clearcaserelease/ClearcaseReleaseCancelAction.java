@@ -23,14 +23,14 @@
 
 package com.thalesgroup.hudson.plugins.clearcaserelease;
 
+import hudson.FilePath;
 import hudson.Launcher;
-import hudson.Util;
-import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.TaskThread;
 import hudson.plugins.clearcase.ClearCaseUcmSCM;
 import hudson.plugins.clearcase.HudsonClearToolLauncher;
-import hudson.plugins.clearcase.ucm.UcmMakeBaselineComposite;
 import hudson.scm.SCM;
 import hudson.security.ACL;
 import hudson.security.Permission;
@@ -38,30 +38,40 @@ import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
 import javax.servlet.ServletException;
-import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Represents the composite baseline release action
+ * Cancel the badge action and reinitialize the release baseline to INITIAL
  */
-public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAction {
+public class ClearcaseReleaseCancelAction extends ClearcaseReleaseAction {
 
-    private AbstractBuild owner;
 
-    public ClearcaseReleaseCompositeBaselineAction(AbstractBuild owner) {
-        super(owner.getWorkspace());
+    private Run owner;
+
+    private final AbstractProject project;
+
+    private ClearcaseReleaseBuildBadgeAction releaseBuildBadgeAction;
+
+    private List<String> promotedBaselines = new ArrayList<String>();
+
+    public ClearcaseReleaseCancelAction(Run owner, AbstractProject project, FilePath workspace, ClearcaseReleaseBuildBadgeAction releaseBuildBadgeAction, List<String> promotedBaselines) {
+        super(workspace);
         this.owner = owner;
+        this.project = project;
+        this.releaseBuildBadgeAction = releaseBuildBadgeAction;
+        this.promotedBaselines = promotedBaselines;
     }
 
+
     @SuppressWarnings("unused")
-    public AbstractBuild getOwner() {
+    public Run getOwner() {
         return owner;
     }
 
     public String getDisplayName() {
-        return Messages.ReleaseAction_perform_buildCompositeBaseline_name();
+        return "Delete the release baseline";
     }
 
     protected Permission getPermission() {
@@ -75,8 +85,8 @@ public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAct
 
     public String getIconFileName() {
         //TODO Check if the composite baseline is already promoted to RELEAED (saved filed or clearcase request)
-        if (ClearcaseReleaseBuildWrapper.hasReleasePermission(owner.getProject())) {
-            return "installer.gif";
+        if (ClearcaseReleaseBuildWrapper.hasReleasePermission(project)) {
+            return "edit-delete.gif";
         }
         // by returning null the link will not be shown.
         return null;
@@ -84,16 +94,16 @@ public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAct
 
 
     public String getUrlName() {
-        return "clearcasereleasecompositebaseline";
+        return "deleterelease";
     }
 
     @SuppressWarnings("unused")
     public synchronized void doSubmit(StaplerRequest req, StaplerResponse resp) throws IOException, ServletException, InterruptedException {
 
         // verify permission
-        ClearcaseReleaseBuildWrapper.checkReleasePermission(owner.getProject());
+        ClearcaseReleaseBuildWrapper.checkReleasePermission(project);
 
-        SCM scm = owner.getProject().getScm();
+        SCM scm = project.getScm();
         if (scm instanceof ClearCaseUcmSCM) {
             ClearCaseUcmSCM clearCaseUcmSCM = (ClearCaseUcmSCM) scm;
             new TagWorkerThread().start();
@@ -110,61 +120,33 @@ public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAct
 
 
         public TagWorkerThread() {
-            super(ClearcaseReleaseCompositeBaselineAction.this, ListenerAndText.forMemory());
+            super(ClearcaseReleaseCancelAction.this, ListenerAndText.forMemory());
         }
 
         @Override
         protected void perform(TaskListener listener) {
             try {
-                listener.getLogger().println("\nClearcase release preforming");
+                listener.getLogger().println("\nClearcase release cancel preforming");
                 Launcher launcher = new Launcher.LocalLauncher(listener);
                 HudsonClearToolLauncher clearToolLauncher = getHudsonClearToolLauncher(listener, launcher);
 
-                //Get the composite baseline information
-                UcmMakeBaselineComposite composite = (UcmMakeBaselineComposite) owner.getProject().getPublishersList().get(hudson.plugins.clearcase.ucm.UcmMakeBaselineComposite.class);
-                String compositeBaseLine = composite.getCompositeNamePattern();
-                compositeBaseLine = Util.replaceMacro(compositeBaseLine, owner.getEnvironment(listener));
+                //Remove the badge action
+                owner.getActions().remove(releaseBuildBadgeAction);
 
-                //Get the PVOB from the composite stream
-                String compositeStreamSelector = composite.getCompositeStreamSelector();
-                String pvob = compositeStreamSelector;
-                if (compositeStreamSelector.contains("@" + File.separator)) {
-                    pvob = compositeStreamSelector.substring(compositeStreamSelector.indexOf("@" + File.separator) + 2, compositeStreamSelector.length());
+                //Remove itself the cancel release action
+                owner.getActions().remove(ClearcaseReleaseCancelAction.this);
+
+                //Cancel the release baseline
+                for (String promotedBaseline : promotedBaselines) {
+                    changeLevelBaseline(promotedBaseline, TYPE_BASELINE_STATUS.BUILT, clearToolLauncher, workspaceRoot);
                 }
 
-                //Check the status
-                listener.getLogger().println("Check the status of the composite baseline '" + compositeBaseLine + "'");
-                String compositeBaselineStatus = getStatusBaseLine(compositeBaseLine, pvob, clearToolLauncher, workspaceRoot);
+                //Unlock the owner
+                owner.keepLog(false);
 
-                if ("BUILT".equals(compositeBaselineStatus)) {
+                //Save the build
+                owner.save();
 
-                    //Promote to RELEASED the compiste baseline
-                    listener.getLogger().println("Promote to RELEASED the composite baseline '" + compositeBaseLine + "'");
-                    changeLevelBaseline(compositeBaseLine + "@\\" + pvob, TYPE_BASELINE_STATUS.RELEASED, clearToolLauncher, workspaceRoot);
-
-                    //Add a badge icon
-                    String compositeBaseNameDescription = compositeBaseLine + ":RELEASED";
-                    ClearcaseReleaseBuildBadgeAction releaseBuildBadgeAction = new ClearcaseReleaseBuildBadgeAction(compositeBaseNameDescription);
-                    owner.addAction(releaseBuildBadgeAction);
-
-                    //Add a cancel action
-                    owner.addAction(new ClearcaseReleaseCancelAction(owner, owner.getProject(), workspaceRoot, releaseBuildBadgeAction, Arrays.asList(new String[]{compositeBaseLine + "@\\" + pvob})));
-
-                    // Keep the build
-                    owner.keepLog();
-
-                    //Set a build description
-                    owner.setDescription(compositeBaseNameDescription);
-
-                    //Save the the build information
-                    owner.save();
-
-                    //reset the worker thread
-                    workerThread = null;
-
-                } else {
-                    listener.getLogger().println("\nThe composite baseline '" + compositeBaseLine + "' hasn't the status BUILT.");
-                }
                 listener.getLogger().println("");
 
             } catch (Throwable e) {
@@ -172,6 +154,4 @@ public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAct
             }
         }
     }
-
-
 }

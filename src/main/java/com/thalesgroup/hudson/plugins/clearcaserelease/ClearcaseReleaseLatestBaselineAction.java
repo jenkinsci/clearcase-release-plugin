@@ -53,17 +53,18 @@ import java.util.List;
 public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction {
 
     private final AbstractProject project;
-
+    private transient Run owner;
 
     public ClearcaseReleaseLatestBaselineAction(AbstractProject project) {
 
         super(project.getWorkspace());
         this.project = project;
+        owner = project.getLastSuccessfulBuild();
     }
 
     @SuppressWarnings("unused")
     public Run getOwner() {
-        return project.getLastSuccessfulBuild();
+        return owner;
     }
 
     public String getUrlName() {
@@ -90,7 +91,7 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
     }
 
     protected ACL getACL() {
-        return project.getLastSuccessfulBuild().getACL();
+        return owner.getACL();
     }
 
 
@@ -215,7 +216,7 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
         SCM scm = project.getScm();
         if (scm instanceof ClearCaseUcmSCM) {
             ClearCaseUcmSCM clearCaseUcmSCM = (ClearCaseUcmSCM) scm;
-            new TagWorkerThread(project.getLastBuild(), clearCaseUcmSCM).start();
+            new TagWorkerThread(clearCaseUcmSCM).start();
         }
 
         doIndex(req, resp);
@@ -226,12 +227,11 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
      */
     public final class TagWorkerThread extends TaskThread {
 
-        private final Run owner;
+
         private final ClearCaseUcmSCM clearCaseUcmSCM;
 
-        public TagWorkerThread(Run owner, ClearCaseUcmSCM clearCaseUcmSCM) {
+        public TagWorkerThread(ClearCaseUcmSCM clearCaseUcmSCM) {
             super(ClearcaseReleaseLatestBaselineAction.this, ListenerAndText.forMemory());
-            this.owner = owner;
             this.clearCaseUcmSCM = clearCaseUcmSCM;
         }
 
@@ -270,18 +270,22 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
 
                 //Promotion to RELEASED all the latest baseline on modifiable component
                 for (String latestBaselineWithPVOB : keepBaselines) {
-                    promoteCompositeBaselineToReleasedLevel(latestBaselineWithPVOB, clearToolLauncher, workspaceRoot);
+                    changeLevelBaseline(latestBaselineWithPVOB, TYPE_BASELINE_STATUS.RELEASED, clearToolLauncher, workspaceRoot);
                 }
 
                 //Add a badge icon
-                String compositeBaseNameDescription = "The latest baseline has been RELEASED";
-                owner.addAction(new ClearcaseReleaseBuildBadgeAction(compositeBaseNameDescription));
+                String latestBaselinesReleaseDescription = "The latest baseline has been RELEASED";
+                ClearcaseReleaseBuildBadgeAction releaseBuildBadgeAction = new ClearcaseReleaseBuildBadgeAction(latestBaselinesReleaseDescription);
+                owner.addAction(releaseBuildBadgeAction);
+
+                //Add a cancel action
+                owner.addAction(new ClearcaseReleaseCancelAction(owner, project, workspaceRoot, releaseBuildBadgeAction, keepBaselines));
 
                 // Keep the build
                 owner.keepLog();
 
                 //Set a build description
-                owner.setDescription(compositeBaseNameDescription);
+                owner.setDescription(latestBaselinesReleaseDescription);
 
                 //Save the the build information
                 owner.save();

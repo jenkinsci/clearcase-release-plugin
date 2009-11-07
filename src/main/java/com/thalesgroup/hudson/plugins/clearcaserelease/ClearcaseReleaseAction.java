@@ -45,12 +45,27 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
 
     protected final FilePath workspaceRoot;
 
+    protected static enum TYPE_BASELINE_STATUS {
+
+        RELEASED("RELEASED"),
+        BUILT("BUILT");
+
+        private String level;
+
+        private TYPE_BASELINE_STATUS(String level) {
+            this.level = level;
+        }
+
+
+    }
+
     protected ClearcaseReleaseAction(FilePath workapace) {
         this.workspaceRoot = workapace;
     }
 
     /**
-     * Retieve the Clearcase launcher 
+     * Retieve the Clearcase launcher
+     *
      * @param listener the Hudson listener
      * @param launcher the Hudson launcher
      * @return the Clearcase launcher
@@ -65,6 +80,7 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
 
     /**
      * Select the view to display
+     *
      * @param req the request object
      * @param rsp the response page
      * @throws IOException
@@ -76,6 +92,7 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
 
     /**
      * Choose the page to display during the release processing
+     *
      * @return the displayed page
      */
     protected synchronized String chooseAction() {
@@ -86,10 +103,11 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
 
     /**
      * Get the status of a given UCM baseline
-     * @param baseLine the UCM baseline
-     * @param pvob the UCM P_VOB
+     *
+     * @param baseLine          the UCM baseline
+     * @param pvob              the UCM P_VOB
      * @param clearToolLauncher : the clearcase object for launching commands
-     * @param filePath the location where to launch the clearcase command
+     * @param filePath          the location where to launch the clearcase command
      * @return the baseline status : INITIAL, BUILT, REJECTED, RELEASED or OTHERS
      * @throws IOException
      * @throws InterruptedException
@@ -119,23 +137,26 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
     }
 
     /**
-     * Promote an UCM  baseline (composite or not) to RELEASED
+     * Change the level of an UCM  baseline (composite or not)
+     *
      * @param baselineNameWithPVOB the given baseline with the P_VOB
-     * @param clearToolLauncher  the clearcase object launcher
-     * @param filePath the location where to launch the clearcase coommand
+     * @param status               the new baseline status
+     * @param clearToolLauncher    the clearcase object launcher
+     * @param filePath             the location where to launch the clearcase coommand
      * @throws InterruptedException
      * @throws IOException
      */
     //cleartool chbl -level RELEASED C_hudson-test-2_2009-10-29_18-36-07@\P_ORC
-    protected void promoteCompositeBaselineToReleasedLevel
-            (String baselineNameWithPVOB,
-             HudsonClearToolLauncher clearToolLauncher, FilePath filePath)
+    protected void changeLevelBaseline(String baselineNameWithPVOB,
+                                       TYPE_BASELINE_STATUS status,
+                                       HudsonClearToolLauncher clearToolLauncher,
+                                       FilePath filePath)
             throws InterruptedException, IOException {
 
         ArgumentListBuilder cmd = new ArgumentListBuilder();
         cmd.add("chbl");
         cmd.add("-level");
-        cmd.add("RELEASED");
+        cmd.add(status.level);
         cmd.add(baselineNameWithPVOB);
 
         clearToolLauncher.run(cmd.toCommandArray(), null, null, filePath);

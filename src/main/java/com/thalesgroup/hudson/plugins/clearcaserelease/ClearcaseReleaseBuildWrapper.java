@@ -55,6 +55,7 @@ public class ClearcaseReleaseBuildWrapper extends BuildWrapper {
 
     /**
      * Release actions is given by the BUILD actions
+     *
      * @param job the current project
      * @return true if the BUILD permission is set
      */
@@ -64,6 +65,7 @@ public class ClearcaseReleaseBuildWrapper extends BuildWrapper {
 
     /**
      * Release actions is given by the BUILD actions
+     *
      * @param job the current project
      */
     public static void checkReleasePermission(AbstractProject job) {

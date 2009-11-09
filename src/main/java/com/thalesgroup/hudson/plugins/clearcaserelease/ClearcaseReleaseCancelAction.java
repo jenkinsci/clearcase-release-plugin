@@ -67,7 +67,7 @@ public class ClearcaseReleaseCancelAction extends ClearcaseReleaseAction {
 
     @SuppressWarnings("unused")
     public Run getOwner() {
-        return owner;
+        return owner;  
     }
 
     public String getDisplayName() {
@@ -143,6 +143,9 @@ public class ClearcaseReleaseCancelAction extends ClearcaseReleaseAction {
 
                 //Unlock the owner
                 owner.keepLog(false);
+
+                //Remove the description
+                owner.setDescription(null);
 
                 //Save the build
                 owner.save();

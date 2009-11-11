@@ -53,25 +53,6 @@ public class ClearcaseReleaseBuildWrapper extends BuildWrapper {
         return (DescriptorImpl) super.getDescriptor();
     }
 
-    /**
-     * Release actions is given by the BUILD actions
-     *
-     * @param job the current project
-     * @return true if the BUILD permission is set
-     */
-    public static boolean hasReleasePermission(AbstractProject job) {
-        return job.hasPermission(Item.BUILD);
-    }
-
-    /**
-     * Release actions is given by the BUILD actions
-     *
-     * @param job the current project
-     */
-    public static void checkReleasePermission(AbstractProject job) {
-        job.checkPermission(Item.BUILD);
-    }
-
     @Override
     public Environment setUp(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
 

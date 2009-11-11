@@ -33,7 +33,6 @@ import hudson.plugins.clearcase.ClearCaseUcmSCM;
 import hudson.plugins.clearcase.HudsonClearToolLauncher;
 import hudson.scm.SCM;
 import hudson.security.ACL;
-import hudson.security.Permission;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
@@ -67,15 +66,11 @@ public class ClearcaseReleaseCancelAction extends ClearcaseReleaseAction {
 
     @SuppressWarnings("unused")
     public Run getOwner() {
-        return owner;  
+        return owner;
     }
 
     public String getDisplayName() {
         return "Delete the release baseline";
-    }
-
-    protected Permission getPermission() {
-        return SCM.TAG;
     }
 
     protected ACL getACL() {
@@ -84,8 +79,7 @@ public class ClearcaseReleaseCancelAction extends ClearcaseReleaseAction {
 
 
     public String getIconFileName() {
-        //TODO Check if the composite baseline is already promoted to RELEAED (saved filed or clearcase request)
-        if (ClearcaseReleaseBuildWrapper.hasReleasePermission(project)) {
+        if (hasReleasePermission(project)) {
             return "edit-delete.gif";
         }
         // by returning null the link will not be shown.
@@ -100,8 +94,8 @@ public class ClearcaseReleaseCancelAction extends ClearcaseReleaseAction {
     @SuppressWarnings("unused")
     public synchronized void doSubmit(StaplerRequest req, StaplerResponse resp) throws IOException, ServletException, InterruptedException {
 
-        // verify permission
-        ClearcaseReleaseBuildWrapper.checkReleasePermission(project);
+        //The logged user must bae the TAG permission
+        getACL().checkPermission(SCM.TAG);
 
         SCM scm = project.getScm();
         if (scm instanceof ClearCaseUcmSCM) {
@@ -144,13 +138,11 @@ public class ClearcaseReleaseCancelAction extends ClearcaseReleaseAction {
                 //Unlock the owner
                 owner.keepLog(false);
 
-                //Remove the description
-                owner.setDescription(null);
-
                 //Save the build
                 owner.save();
 
-                listener.getLogger().println("");
+                //reset the worker thread
+                workerThread = null;
 
             } catch (Throwable e) {
                 e.printStackTrace(listener.fatalError(e.getMessage()));

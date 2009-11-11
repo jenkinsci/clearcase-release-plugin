@@ -25,15 +25,11 @@ package com.thalesgroup.hudson.plugins.clearcaserelease;
 
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.AbstractProject;
-import hudson.model.Run;
-import hudson.model.TaskListener;
-import hudson.model.TaskThread;
+import hudson.model.*;
 import hudson.plugins.clearcase.ClearCaseUcmSCM;
 import hudson.plugins.clearcase.HudsonClearToolLauncher;
 import hudson.scm.SCM;
 import hudson.security.ACL;
-import hudson.security.Permission;
 import hudson.util.ArgumentListBuilder;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -53,32 +49,32 @@ import java.util.List;
 public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction {
 
     private final AbstractProject project;
-    private transient Run owner;
 
     public ClearcaseReleaseLatestBaselineAction(AbstractProject project) {
 
         super(project.getWorkspace());
         this.project = project;
-        owner = project.getLastSuccessfulBuild();
     }
 
     @SuppressWarnings("unused")
     public Run getOwner() {
-        return owner;
+        return project.getLastSuccessfulBuild();
     }
 
     public String getUrlName() {
         return "clearcasereleaselatestbaseline";
     }
 
-    protected Permission getPermission() {
-        return SCM.TAG;
-    }
 
+    /**
+     * Gets the icon if there is at least one success build (or unstable)
+     * and the current user has the right authorizations
+     *
+     * @return the icon to display
+     */
     public String getIconFileName() {
-        //TODO Check if the composite baseline is already promoted to RELEASED (saved filed or clearcase request)
-        Run lastBuild = project.getLastBuild();
-        if (lastBuild != null && ClearcaseReleaseBuildWrapper.hasReleasePermission(project)) {
+        Run lastBuild = project.getLastSuccessfulBuild();
+        if (lastBuild != null && hasReleasePermission(project)) {
             return "installer.gif";
         }
         // by returning null the link will not be shown.
@@ -91,7 +87,7 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
     }
 
     protected ACL getACL() {
-        return owner.getACL();
+        return getOwner().getACL();
     }
 
 
@@ -210,8 +206,8 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
     @SuppressWarnings("unused")
     public synchronized void doSubmit(StaplerRequest req, StaplerResponse resp) throws IOException, ServletException, InterruptedException {
 
-        // verify permission
-        ClearcaseReleaseBuildWrapper.checkReleasePermission(project);
+        //The logged user must bae the TAG permission
+        getACL().checkPermission(SCM.TAG);
 
         SCM scm = project.getScm();
         if (scm instanceof ClearCaseUcmSCM) {
@@ -238,6 +234,9 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
         @Override
         protected void perform(TaskListener listener) {
             try {
+
+                Run owner = getOwner();
+
                 listener.getLogger().println("Performing the release of the latest baselines");
 
                 String streamWithPVOB = clearCaseUcmSCM.getStream();
@@ -268,24 +267,39 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
                     }
                 }
 
+                if (keepBaselines.size() == 0) {
+                    listener.getLogger().println("There is not baseline to promote to RELEASE");
+                    //reset the worker thread
+                    workerThread = null;
+                    return;
+                }
+
                 //Promotion to RELEASED all the latest baseline on modifiable component
+                StringBuffer latestBls = new StringBuffer();
                 for (String latestBaselineWithPVOB : keepBaselines) {
                     changeLevelBaseline(latestBaselineWithPVOB, TYPE_BASELINE_STATUS.RELEASED, clearToolLauncher, workspaceRoot);
+                    latestBls.append(";");
+                    latestBls.append(latestBaselineWithPVOB);
+                }
+                if (latestBls.length() != 0) {
+                    latestBls.delete(0, 1);
                 }
 
                 //Add a badge icon
-                String latestBaselinesReleaseDescription = "The latest baseline has been RELEASED";
+                String latestBaselinesReleaseDescription = "The latest baseline has been released";
                 ClearcaseReleaseBuildBadgeAction releaseBuildBadgeAction = new ClearcaseReleaseBuildBadgeAction(latestBaselinesReleaseDescription);
                 owner.addAction(releaseBuildBadgeAction);
+
+                ArrayList<ParameterValue> parameters = new ArrayList<ParameterValue>();
+                parameters.add(new StringParameterValue("LATEST_BASELINE", latestBls.toString()));
+                owner.addAction(new ParametersAction(parameters));
+
 
                 //Add a cancel action
                 owner.addAction(new ClearcaseReleaseCancelAction(owner, project, workspaceRoot, releaseBuildBadgeAction, keepBaselines));
 
                 // Keep the build
                 owner.keepLog();
-
-                //Set a build description
-                owner.setDescription(latestBaselinesReleaseDescription);
 
                 //Save the the build information
                 owner.save();

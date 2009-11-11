@@ -25,10 +25,13 @@ package com.thalesgroup.hudson.plugins.clearcaserelease;
 
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.model.AbstractProject;
 import hudson.model.TaskAction;
 import hudson.model.TaskListener;
 import hudson.plugins.clearcase.HudsonClearToolLauncher;
 import hudson.plugins.clearcase.PluginImpl;
+import hudson.scm.SCM;
+import hudson.security.Permission;
 import hudson.util.ArgumentListBuilder;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -55,9 +58,16 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
         private TYPE_BASELINE_STATUS(String level) {
             this.level = level;
         }
-
-
     }
+
+
+    /**
+     * Defaults to {@link SCM#TAG}.
+     */
+    protected Permission getPermission() {
+        return SCM.TAG;
+    }
+
 
     protected ClearcaseReleaseAction(FilePath workapace) {
         this.workspaceRoot = workapace;
@@ -77,6 +87,15 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
         return clearToolLauncher;
     }
 
+    /**
+     * Release actions is given by the SCM actions
+     *
+     * @param job the current project
+     * @return true if the BUILD permission is set
+     */
+    protected boolean hasReleasePermission(AbstractProject job) {
+        return job.hasPermission(getPermission());
+    }
 
     /**
      * Select the view to display

@@ -33,7 +33,6 @@ import hudson.plugins.clearcase.HudsonClearToolLauncher;
 import hudson.plugins.clearcase.ucm.UcmMakeBaselineComposite;
 import hudson.scm.SCM;
 import hudson.security.ACL;
-import hudson.security.Permission;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
@@ -64,18 +63,13 @@ public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAct
         return Messages.ReleaseAction_perform_buildCompositeBaseline_name();
     }
 
-    protected Permission getPermission() {
-        return SCM.TAG;
-    }
-
     protected ACL getACL() {
         return owner.getACL();
     }
 
 
     public String getIconFileName() {
-        //TODO Check if the composite baseline is already promoted to RELEAED (saved filed or clearcase request)
-        if (ClearcaseReleaseBuildWrapper.hasReleasePermission(owner.getProject())) {
+        if (hasReleasePermission(owner.getProject())) {
             return "installer.gif";
         }
         // by returning null the link will not be shown.
@@ -90,8 +84,8 @@ public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAct
     @SuppressWarnings("unused")
     public synchronized void doSubmit(StaplerRequest req, StaplerResponse resp) throws IOException, ServletException, InterruptedException {
 
-        // verify permission
-        ClearcaseReleaseBuildWrapper.checkReleasePermission(owner.getProject());
+        //The logged user must bae the TAG permission
+        getACL().checkPermission(SCM.TAG);
 
         SCM scm = owner.getProject().getScm();
         if (scm instanceof ClearCaseUcmSCM) {
@@ -107,7 +101,6 @@ public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAct
      * The thread that performs tagging operation asynchronously.
      */
     public final class TagWorkerThread extends TaskThread {
-
 
         public TagWorkerThread() {
             super(ClearcaseReleaseCompositeBaselineAction.this, ListenerAndText.forMemory());
@@ -152,9 +145,6 @@ public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAct
 
                     // Keep the build
                     owner.keepLog();
-
-                    //Set a build description
-                    owner.setDescription(compositeBaseNameDescription);
 
                     //Save the the build information
                     owner.save();

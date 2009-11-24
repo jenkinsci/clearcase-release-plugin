@@ -124,16 +124,16 @@ public class ClearcaseReleaseCancelAction extends ClearcaseReleaseAction {
                 Launcher launcher = new Launcher.LocalLauncher(listener);
                 HudsonClearToolLauncher clearToolLauncher = getHudsonClearToolLauncher(listener, launcher);
 
+                //Cancel the release baseline
+                for (String promotedBaseline : promotedBaselines) {
+                    changeLevelBaseline(promotedBaseline, TYPE_BASELINE_STATUS.BUILT, clearToolLauncher, workspaceRoot);
+                }
+
                 //Remove the badge action
                 owner.getActions().remove(releaseBuildBadgeAction);
 
                 //Remove itself the cancel release action
                 owner.getActions().remove(ClearcaseReleaseCancelAction.this);
-
-                //Cancel the release baseline
-                for (String promotedBaseline : promotedBaselines) {
-                    changeLevelBaseline(promotedBaseline, TYPE_BASELINE_STATUS.BUILT, clearToolLauncher, workspaceRoot);
-                }
 
                 //Unlock the owner
                 owner.keepLog(false);
@@ -141,12 +141,15 @@ public class ClearcaseReleaseCancelAction extends ClearcaseReleaseAction {
                 //Save the build
                 owner.save();
 
-                //reset the worker thread
-                workerThread = null;
-
-            } catch (Throwable e) {
-                e.printStackTrace(listener.fatalError(e.getMessage()));
             }
+            catch (Throwable e) {
+                listener.getLogger().println("[ERROR]- " + e.getMessage());
+            }
+
+            //reset the worker thread
+            workerThread = null;
+
+            listener.getLogger().println("");
         }
     }
 }

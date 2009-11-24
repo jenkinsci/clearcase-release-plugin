@@ -304,12 +304,12 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
                 //Save the the build information
                 owner.save();
 
-                //reset the worker thread
-                workerThread = null;
-
             } catch (Throwable e) {
-                e.printStackTrace(listener.fatalError(e.getMessage()));
+                listener.getLogger().println("[ERROR] - " + e.getMessage());
             }
+
+            //reset the worker thread
+            workerThread = null;
         }
     }
 

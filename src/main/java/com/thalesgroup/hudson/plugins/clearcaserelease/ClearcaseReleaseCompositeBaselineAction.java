@@ -149,17 +149,18 @@ public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAct
                     //Save the the build information
                     owner.save();
 
-                    //reset the worker thread
-                    workerThread = null;
-
                 } else {
                     listener.getLogger().println("\nThe composite baseline '" + compositeBaseLine + "' hasn't the status BUILT.");
                 }
-                listener.getLogger().println("");
-
-            } catch (Throwable e) {
-                e.printStackTrace(listener.fatalError(e.getMessage()));
             }
+            catch (Throwable e) {
+                listener.getLogger().println("[ERROR] - " + e.getMessage());
+            }
+
+            //reset the worker thread
+            workerThread = null;
+
+            listener.getLogger().println("");
         }
     }
 

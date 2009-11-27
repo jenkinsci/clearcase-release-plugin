@@ -115,42 +115,47 @@ public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAct
 
                 //Get the composite baseline information
                 UcmMakeBaselineComposite composite = (UcmMakeBaselineComposite) owner.getProject().getPublishersList().get(hudson.plugins.clearcase.ucm.UcmMakeBaselineComposite.class);
-                String compositeBaseLine = composite.getCompositeNamePattern();
-                compositeBaseLine = Util.replaceMacro(compositeBaseLine, owner.getEnvironment(listener));
-
-                //Get the PVOB from the composite stream
-                String compositeStreamSelector = composite.getCompositeStreamSelector();
-                String pvob = compositeStreamSelector;
-                if (compositeStreamSelector.contains("@" + File.separator)) {
-                    pvob = compositeStreamSelector.substring(compositeStreamSelector.indexOf("@" + File.separator) + 2, compositeStreamSelector.length());
+                if (composite == null) {
+                    listener.getLogger().println("[ERROR] - No composite baseline has been configured for the job.");                    
                 }
+                else{
+                    String compositeBaseLine = composite.getCompositeNamePattern();
+                    compositeBaseLine = Util.replaceMacro(compositeBaseLine, owner.getEnvironment(listener));
 
-                //Check the status
-                listener.getLogger().println("Check the status of the composite baseline '" + compositeBaseLine + "'");
-                String compositeBaselineStatus = getStatusBaseLine(compositeBaseLine, pvob, clearToolLauncher, workspaceRoot);
+                    //Get the PVOB from the composite stream
+                    String compositeStreamSelector = composite.getCompositeStreamSelector();
+                    String pvob = compositeStreamSelector;
+                    if (compositeStreamSelector.contains("@" + File.separator)) {
+                        pvob = compositeStreamSelector.substring(compositeStreamSelector.indexOf("@" + File.separator) + 2, compositeStreamSelector.length());
+                    }
 
-                if ("BUILT".equals(compositeBaselineStatus)) {
+                    //Check the status
+                    listener.getLogger().println("Check the status of the composite baseline '" + compositeBaseLine + "'");
+                    String compositeBaselineStatus = getStatusBaseLine(compositeBaseLine, pvob, clearToolLauncher, workspaceRoot);
 
-                    //Promote to RELEASED the compiste baseline
-                    listener.getLogger().println("Promote to RELEASED the composite baseline '" + compositeBaseLine + "'");
-                    changeLevelBaseline(compositeBaseLine + "@\\" + pvob, TYPE_BASELINE_STATUS.RELEASED, clearToolLauncher, workspaceRoot);
+                    if ("BUILT".equals(compositeBaselineStatus)) {
 
-                    //Add a badge icon
-                    String compositeBaseNameDescription = compositeBaseLine + ":RELEASED";
-                    ClearcaseReleaseBuildBadgeAction releaseBuildBadgeAction = new ClearcaseReleaseBuildBadgeAction(compositeBaseNameDescription);
-                    owner.addAction(releaseBuildBadgeAction);
+                        //Promote to RELEASED the compiste baseline
+                        listener.getLogger().println("Promote to RELEASED the composite baseline '" + compositeBaseLine + "'");
+                        changeLevelBaseline(compositeBaseLine + "@\\" + pvob, TYPE_BASELINE_STATUS.RELEASED, clearToolLauncher, workspaceRoot);
 
-                    //Add a cancel action
-                    owner.addAction(new ClearcaseReleaseCancelAction(owner, owner.getProject(), workspaceRoot, releaseBuildBadgeAction, Arrays.asList(new String[]{compositeBaseLine + "@\\" + pvob})));
+                        //Add a badge icon
+                        String compositeBaseNameDescription = compositeBaseLine + ":RELEASED";
+                        ClearcaseReleaseBuildBadgeAction releaseBuildBadgeAction = new ClearcaseReleaseBuildBadgeAction(compositeBaseNameDescription);
+                        owner.addAction(releaseBuildBadgeAction);
 
-                    // Keep the build
-                    owner.keepLog();
+                        //Add a cancel action
+                        owner.addAction(new ClearcaseReleaseCancelAction(owner, owner.getProject(), workspaceRoot, releaseBuildBadgeAction, Arrays.asList(new String[]{compositeBaseLine + "@\\" + pvob})));
 
-                    //Save the the build information
-                    owner.save();
+                        // Keep the build
+                        owner.keepLog();
 
-                } else {
-                    listener.getLogger().println("\nThe composite baseline '" + compositeBaseLine + "' hasn't the status BUILT.");
+                        //Save the the build information
+                        owner.save();
+
+                    } else {
+                        listener.getLogger().println("\nThe composite baseline '" + compositeBaseLine + "' hasn't the status BUILT.");
+                    }
                 }
             }
             catch (Throwable e) {

@@ -25,7 +25,10 @@ package com.thalesgroup.hudson.plugins.clearcaserelease;
 
 import hudson.Extension;
 import hudson.Launcher;
-import hudson.model.*;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.Action;
+import hudson.model.BuildListener;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
 import org.kohsuke.stapler.DataBoundConstructor;

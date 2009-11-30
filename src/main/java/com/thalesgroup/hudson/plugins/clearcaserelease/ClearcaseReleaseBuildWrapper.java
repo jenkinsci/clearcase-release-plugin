@@ -42,13 +42,20 @@ import java.io.IOException;
  */
 public class ClearcaseReleaseBuildWrapper extends BuildWrapper {
 
+    private String customReleasePromotionLevel;
+
     @DataBoundConstructor
-    public ClearcaseReleaseBuildWrapper() {
+    public ClearcaseReleaseBuildWrapper(String customReleasePromotionLevel) {
+        if (customReleasePromotionLevel != null && customReleasePromotionLevel.trim().length() == 0) {
+            this.customReleasePromotionLevel = null;
+        } else {
+            this.customReleasePromotionLevel = customReleasePromotionLevel;
+        }
     }
 
     @Override
     public Action getProjectAction(AbstractProject job) {
-        return new ClearcaseReleaseLatestBaselineAction(job);
+        return new ClearcaseReleaseLatestBaselineAction(job, customReleasePromotionLevel);
     }
 
     @Override
@@ -59,7 +66,7 @@ public class ClearcaseReleaseBuildWrapper extends BuildWrapper {
     @Override
     public Environment setUp(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
 
-        build.addAction(new ClearcaseReleaseCompositeBaselineAction(build));
+        build.addAction(new ClearcaseReleaseCompositeBaselineAction(build, customReleasePromotionLevel));
         return new Environment() {
         };
     }
@@ -84,4 +91,9 @@ public class ClearcaseReleaseBuildWrapper extends BuildWrapper {
         }
     }
 
+
+    @SuppressWarnings("unused")
+    public String getCustomReleasePromotionLevel() {
+        return customReleasePromotionLevel;
+    }
 }

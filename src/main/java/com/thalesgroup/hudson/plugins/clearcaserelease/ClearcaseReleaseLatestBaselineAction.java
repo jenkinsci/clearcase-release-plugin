@@ -50,10 +50,12 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
 
     private final AbstractProject project;
 
-    public ClearcaseReleaseLatestBaselineAction(AbstractProject project) {
+    private final String customReleasePromotionLevel;
 
+    public ClearcaseReleaseLatestBaselineAction(AbstractProject project, String customReleasePromotionLevel) {
         super(project.getWorkspace());
         this.project = project;
+        this.customReleasePromotionLevel=customReleasePromotionLevel;
     }
 
     @SuppressWarnings("unused")
@@ -209,13 +211,17 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
         //The logged user must bae the TAG permission
         getACL().checkPermission(SCM.TAG);
 
+        process();
+
+        doIndex(req, resp);
+    }
+
+    public void process() {
         SCM scm = project.getScm();
         if (scm instanceof ClearCaseUcmSCM) {
             ClearCaseUcmSCM clearCaseUcmSCM = (ClearCaseUcmSCM) scm;
             new TagWorkerThread(clearCaseUcmSCM).start();
         }
-
-        doIndex(req, resp);
     }
 
     /**
@@ -250,9 +256,11 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
 
                 //Get all the latest baselines
                 List<String> latestBaselines = getLatestBaselines(streamWithPVOB, clearToolLauncher, workspaceRoot);
+                listener.getLogger().println("");
 
                 //Get the read/write components
                 List<String> modComps = getModComponentsFromStream(streamWithPVOB, clearToolLauncher, workspaceRoot);
+                listener.getLogger().println("");
 
                 //Filtering
                 List<String> keepBaselines = new ArrayList<String>();
@@ -260,6 +268,7 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
 
                     //Retrieve the component of the baseline
                     String comp = getComponentFromBaseline(latestBaseline, clearToolLauncher, workspaceRoot);
+                    listener.getLogger().println("");
 
                     //Keep on the a modifiable component
                     if (modComps.contains(comp)) {
@@ -277,7 +286,9 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
                 //Promotion to RELEASED all the latest baseline on modifiable component
                 StringBuffer latestBls = new StringBuffer();
                 for (String latestBaselineWithPVOB : keepBaselines) {
-                    changeLevelBaseline(latestBaselineWithPVOB, TYPE_BASELINE_STATUS.RELEASED, clearToolLauncher, workspaceRoot);
+                    String status=(customReleasePromotionLevel==null)?BASELINE_PROMOTION_LEVEL.RELEASED.getLevel():customReleasePromotionLevel;
+                    changeLevelBaseline(latestBaselineWithPVOB, status, clearToolLauncher, workspaceRoot);
+                    listener.getLogger().println("");
                     latestBls.append(";");
                     latestBls.append(latestBaselineWithPVOB);
                 }

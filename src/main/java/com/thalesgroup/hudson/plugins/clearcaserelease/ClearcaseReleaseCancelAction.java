@@ -70,7 +70,7 @@ public class ClearcaseReleaseCancelAction extends ClearcaseReleaseAction {
     }
 
     public String getDisplayName() {
-        return "Delete the release baseline";
+        return Messages.ReleaseAction_perform_cancelPromotionReleaseLevel();
     }
 
     protected ACL getACL() {
@@ -97,13 +97,18 @@ public class ClearcaseReleaseCancelAction extends ClearcaseReleaseAction {
         //The logged user must bae the TAG permission
         getACL().checkPermission(SCM.TAG);
 
-        SCM scm = project.getScm();
-        if (scm instanceof ClearCaseUcmSCM) {
-            ClearCaseUcmSCM clearCaseUcmSCM = (ClearCaseUcmSCM) scm;
-            new TagWorkerThread().start();
-        }
+        //Cancel the Clearcase UCM release async
+        process();
 
         doIndex(req, resp);
+    }
+
+
+    public synchronized void process() {
+        SCM scm = project.getScm();
+        if (scm instanceof ClearCaseUcmSCM) {
+            new TagWorkerThread().start();
+        }
     }
 
 
@@ -126,7 +131,8 @@ public class ClearcaseReleaseCancelAction extends ClearcaseReleaseAction {
 
                 //Cancel the release baseline
                 for (String promotedBaseline : promotedBaselines) {
-                    changeLevelBaseline(promotedBaseline, TYPE_BASELINE_STATUS.BUILT, clearToolLauncher, workspaceRoot);
+                    changeLevelBaseline(promotedBaseline, BASELINE_PROMOTION_LEVEL.BUILT.getLevel(), clearToolLauncher, workspaceRoot);
+                    listener.getLogger().println("");
                 }
 
                 //Remove the badge action
@@ -148,8 +154,6 @@ public class ClearcaseReleaseCancelAction extends ClearcaseReleaseAction {
 
             //reset the worker thread
             workerThread = null;
-
-            listener.getLogger().println("");
         }
     }
 }

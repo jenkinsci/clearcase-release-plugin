@@ -48,15 +48,22 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
 
     protected final FilePath workspaceRoot;
 
-    protected static enum TYPE_BASELINE_STATUS {
+    /**
+     * The promotion level possibilities
+     */
+    protected static enum BASELINE_PROMOTION_LEVEL {
 
         RELEASED("RELEASED"),
         BUILT("BUILT");
 
         private String level;
 
-        private TYPE_BASELINE_STATUS(String level) {
+        private BASELINE_PROMOTION_LEVEL(String level) {
             this.level = level;
+        }
+
+        public String getLevel(){
+            return this.level;
         }
     }
 
@@ -167,7 +174,7 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
      */
     //cleartool chbl -level RELEASED C_hudson-test-2_2009-10-29_18-36-07@\P_ORC
     protected void changeLevelBaseline(String baselineNameWithPVOB,
-                                       TYPE_BASELINE_STATUS status,
+                                       String status,
                                        HudsonClearToolLauncher clearToolLauncher,
                                        FilePath filePath)
             throws InterruptedException, IOException {
@@ -175,9 +182,9 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
         ArgumentListBuilder cmd = new ArgumentListBuilder();
         cmd.add("chbl");
         cmd.add("-level");
-        cmd.add(status.level);
+        cmd.add(status);
         cmd.add(baselineNameWithPVOB);
 
-        clearToolLauncher.run(cmd.toCommandArray(), null, null, filePath);
+        clearToolLauncher.run(cmd.toCommandArray(), null, null, filePath);               
     }
 }

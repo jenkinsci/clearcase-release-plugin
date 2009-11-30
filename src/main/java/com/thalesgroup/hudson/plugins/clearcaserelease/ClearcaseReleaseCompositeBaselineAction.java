@@ -47,11 +47,14 @@ import java.util.Arrays;
  */
 public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAction {
 
-    private AbstractBuild owner;
+    private final AbstractBuild owner;
 
-    public ClearcaseReleaseCompositeBaselineAction(AbstractBuild owner) {
+    private final String customReleasePromotionLevel;
+
+    public ClearcaseReleaseCompositeBaselineAction(AbstractBuild owner, String customReleasePromotionLevel) {
         super(owner.getWorkspace());
         this.owner = owner;
+        this.customReleasePromotionLevel=customReleasePromotionLevel;
     }
 
     @SuppressWarnings("unused")
@@ -87,13 +90,16 @@ public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAct
         //The logged user must bae the TAG permission
         getACL().checkPermission(SCM.TAG);
 
-        SCM scm = owner.getProject().getScm();
-        if (scm instanceof ClearCaseUcmSCM) {
-            ClearCaseUcmSCM clearCaseUcmSCM = (ClearCaseUcmSCM) scm;
-            new TagWorkerThread().start();
-        }
+        process();
 
         doIndex(req, resp);
+    }
+
+    public void process() {
+        SCM scm = owner.getProject().getScm();
+        if (scm instanceof ClearCaseUcmSCM) {
+            new TagWorkerThread().start();
+        }
     }
 
 
@@ -116,9 +122,8 @@ public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAct
                 //Get the composite baseline information
                 UcmMakeBaselineComposite composite = (UcmMakeBaselineComposite) owner.getProject().getPublishersList().get(hudson.plugins.clearcase.ucm.UcmMakeBaselineComposite.class);
                 if (composite == null) {
-                    listener.getLogger().println("[ERROR] - No composite baseline has been configured for the job.");                    
-                }
-                else{
+                    listener.getLogger().println("[ERROR] - No composite baseline has been configured for the job.");
+                } else {
                     String compositeBaseLine = composite.getCompositeNamePattern();
                     compositeBaseLine = Util.replaceMacro(compositeBaseLine, owner.getEnvironment(listener));
 
@@ -135,9 +140,11 @@ public class ClearcaseReleaseCompositeBaselineAction extends ClearcaseReleaseAct
 
                     if ("BUILT".equals(compositeBaselineStatus)) {
 
-                        //Promote to RELEASED the compiste baseline
-                        listener.getLogger().println("Promote to RELEASED the composite baseline '" + compositeBaseLine + "'");
-                        changeLevelBaseline(compositeBaseLine + "@\\" + pvob, TYPE_BASELINE_STATUS.RELEASED, clearToolLauncher, workspaceRoot);
+                        //Promote to the release promotion level the compiste baseline
+                        String status=(customReleasePromotionLevel==null)?BASELINE_PROMOTION_LEVEL.RELEASED.getLevel():customReleasePromotionLevel;
+                        listener.getLogger().println("Promote to the release promotion level the composite baseline '" + compositeBaseLine + "' with the level '" + status + '"');                        
+                        changeLevelBaseline(compositeBaseLine + "@\\" + pvob, status, clearToolLauncher, workspaceRoot);
+                        listener.getLogger().println("");
 
                         //Add a badge icon
                         String compositeBaseNameDescription = compositeBaseLine + ":RELEASED";

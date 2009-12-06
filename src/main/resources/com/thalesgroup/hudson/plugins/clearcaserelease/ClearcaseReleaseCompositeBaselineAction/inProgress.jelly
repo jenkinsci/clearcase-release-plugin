@@ -28,7 +28,7 @@
     <l:main-panel>
       <h1>Build #${it.owner.number}</h1>
       <p>
-        ${%Promotion of the composite baseline is in progress:}
+        ${%Composite baseline promotion is in progress:}
       </p>
       
       <st:include page="log.jelly" />

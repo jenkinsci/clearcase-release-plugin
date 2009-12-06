@@ -3,7 +3,7 @@
   <parent>
     <groupId>org.jvnet.hudson.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>1.330</version>
+    <version>1.336</version>
     <relativePath>../pom.xml</relativePath>
   </parent>
   
@@ -33,7 +33,7 @@
       <dependency>
          <groupId>org.jvnet.hudson.plugins</groupId>
          <artifactId>clearcase</artifactId>
-         <version>1.0.2-thales</version> 
+         <version>[1.0.2,]</version> 
       </dependency>
    </dependencies>
 

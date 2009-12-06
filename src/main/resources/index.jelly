@@ -23,5 +23,5 @@
 *******************************************************************************/
 -->
 <div>
-  A plug-in that enables you to perform releases for Clearcase UCM.
+  A plug-in that enables users to promote UCM baselines to the release promotion level.
 </div>

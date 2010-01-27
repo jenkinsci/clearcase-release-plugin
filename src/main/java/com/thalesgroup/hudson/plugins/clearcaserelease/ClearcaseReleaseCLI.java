@@ -25,9 +25,10 @@ package com.thalesgroup.hudson.plugins.clearcaserelease;
 
 import hudson.cli.declarative.CLIMethod;
 import hudson.cli.declarative.CLIResolver;
-import hudson.model.*;
-import hudson.Launcher;
-import hudson.plugins.clearcase.HudsonClearToolLauncher;
+import hudson.model.AbstractItem;
+import hudson.model.Hudson;
+import hudson.model.Job;
+import hudson.model.Run;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 
@@ -42,7 +43,7 @@ public class ClearcaseReleaseCLI {
 
     public ClearcaseReleaseCLI(AbstractItem job, int buildnumber) {
         this.job = job;
-        this.buildnumber=buildnumber;
+        this.buildnumber = buildnumber;
     }
 
     @CLIResolver
@@ -56,12 +57,12 @@ public class ClearcaseReleaseCLI {
             throw new CmdLineException(null, "A job parameter is required");
 
         int buildnumber = 0;
-        if (id != null){           
-            try{
-                  buildnumber= Integer.parseInt(id) ;
+        if (id != null) {
+            try {
+                buildnumber = Integer.parseInt(id);
             }
-            catch (NumberFormatException nfe){
-               throw new CmdLineException(null, "A job build number (number) is required :" + id);
+            catch (NumberFormatException nfe) {
+                throw new CmdLineException(null, "A job build number (number) is required :" + id);
             }
         }
 
@@ -69,30 +70,30 @@ public class ClearcaseReleaseCLI {
 
     }
 
-    @CLIMethod(name="clearcaseCancelRelease")
+    @CLIMethod(name = "clearcaseCancelRelease")
     @SuppressWarnings("unused")
     public synchronized void clearcaseCancelRelease() throws IOException, InterruptedException {
-        Run run  = (Run) (((Job)this.job).getBuildByNumber(buildnumber));
+        Run run = (Run) (((Job) this.job).getBuildByNumber(buildnumber));
         ClearcaseReleaseCancelAction clearcaseReleaseCancelAction = run.getAction(ClearcaseReleaseCancelAction.class);
         clearcaseReleaseCancelAction.process();
     }
 
-    @CLIMethod(name="clearcasePromoteCompositeBaseline")
+    @CLIMethod(name = "clearcasePromoteCompositeBaseline")
     @SuppressWarnings("unused")
     public synchronized void clearcasePromoteCompositeBaseline() throws IOException, InterruptedException {
-        Run run  = (Run) (((Job)this.job).getBuildByNumber(buildnumber));
+        Run run = (Run) (((Job) this.job).getBuildByNumber(buildnumber));
         ClearcaseReleaseCompositeBaselineAction clearcaseReleaseCompositeBaselineAction = run.getAction(ClearcaseReleaseCompositeBaselineAction.class);
         clearcaseReleaseCompositeBaselineAction.process();
     }
 
-    @CLIMethod(name="clearcasePromoteLatestBaselines")
+    @CLIMethod(name = "clearcasePromoteLatestBaselines")
     @SuppressWarnings("unused")
     public synchronized void clearcasePromoteLatestBaselines() throws IOException, InterruptedException {
         ClearcaseReleaseLatestBaselineAction clearcaseReleaseLatestBaselineAction = job.getAction(ClearcaseReleaseLatestBaselineAction.class);
         clearcaseReleaseLatestBaselineAction.process();
     }
 
-    
+
 }
 
 

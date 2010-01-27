@@ -23,24 +23,18 @@
 
 package com.thalesgroup.hudson.plugins.clearcaserelease;
 
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.model.*;
+import hudson.model.AbstractProject;
+import hudson.model.Run;
+import hudson.model.TaskListener;
+import hudson.model.TaskThread;
 import hudson.plugins.clearcase.ClearCaseUcmSCM;
-import hudson.plugins.clearcase.HudsonClearToolLauncher;
 import hudson.scm.SCM;
 import hudson.security.ACL;
-import hudson.util.ArgumentListBuilder;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
 
 import javax.servlet.ServletException;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 
 /**
@@ -55,7 +49,7 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
     public ClearcaseReleaseLatestBaselineAction(AbstractProject project, String customReleasePromotionLevel) {
         super(project.getWorkspace());
         this.project = project;
-        this.customReleasePromotionLevel=customReleasePromotionLevel;
+        this.customReleasePromotionLevel = customReleasePromotionLevel;
     }
 
     @SuppressWarnings("unused")
@@ -93,118 +87,6 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
     }
 
 
-    /**
-     * Get the read/write components for a given stream
-     *
-     * @param streamPVOB        the stream name with the P_VOB
-     * @param clearToolLauncher the clearcase launcher object
-     * @param filePath          the location where to launch the clearcase command
-     * @return the component name
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    /*
-    cleartool lsstream -fmt "%[mod_comps]CXp" P_LinkMgt_V4.0.0_int@\P_ORC
-    -->component:TracMgt_Rqtf_QueryGen@\P_ORC, component:PapeeteReqtifyConnector@\P_ORC, component:LinkMgt_Reqtify@\P_ORC
-    */
-    private List<String> getModComponentsFromStream(
-            String streamPVOB,
-            HudsonClearToolLauncher clearToolLauncher,
-            FilePath filePath)
-            throws IOException, InterruptedException {
-
-        ArgumentListBuilder cmd = new ArgumentListBuilder();
-        cmd.add("lsstream");
-        cmd.add("-fmt");
-        cmd.add("\"%[mod_comps]p\"");
-        cmd.add(streamPVOB);
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        clearToolLauncher.run(cmd.toCommandArray(), null, baos, filePath);
-        baos.close();
-
-        String reusltClt = baos.toString();
-        return Arrays.asList(reusltClt.split(" "));
-    }
-
-
-    /**
-     * Get the latest baselines for a given stream
-     *
-     * @param streanWithPVOB    an UCM stream concatened with the PVOB
-     * @param clearToolLauncher the clercase object launcher
-     * @param filePath          the location  where to launch the clearcase command
-     * @return the list of baseline name
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    /*
-    cleartool lsstream -fmt "%[latest_bls]p" P_LinkMgt_V4.0.0_int@\P_ORC
-    -->
-    baseline:P_TracMngt_Rqtf_CoreModel_V3.0.1@\P_ORC,
-    baseline:LinkManager-4.3.0-2009-10-29_11-03-52.9990@\P_ORC,
-    baseline:LinkManager-4.3.0-2009-10-29_11-03-52.2547@\P_ORC,
-    baseline:LinkManager-4.3.0-2009-10-29_11-03-52@\P_ORC
-    */
-    private List<String> getLatestBaselines(
-            String streanWithPVOB,
-            HudsonClearToolLauncher clearToolLauncher,
-            FilePath filePath)
-            throws IOException, InterruptedException {
-
-        ArgumentListBuilder cmd = new ArgumentListBuilder();
-        cmd.add("lsstream");
-        cmd.add("-fmt");
-        cmd.add("\"%[latest_bls]CXp\"");
-        cmd.add(streanWithPVOB);
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        clearToolLauncher.run(cmd.toCommandArray(), null, baos, filePath);
-        baos.close();
-        String resultClt = baos.toString();
-
-        //Remove the 'baseline:' prefix
-        resultClt = resultClt.replace("baseline:", "");
-
-        //Slit the result. Within the result, each result has a space.
-        return Arrays.asList(resultClt.split(", "));
-    }
-
-
-    /**
-     * Get the component for a given baseline
-     *
-     * @param baseLineWithPVOB  the given baseline name concatened with the PVOB
-     * @param clearToolLauncher the clearcase launcher object
-     * @param filePath          the location where to launch the clearcase command
-     * @return the component object
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    //cleartool lsbl -fmt "%[component]p" P_TracMngt_Rqtf_CoreModel_V3.0.1@\P_ORC
-    //TracMgt_Rqtf_CoreModel
-    private String getComponentFromBaseline(
-            String baseLineWithPVOB,
-            HudsonClearToolLauncher clearToolLauncher,
-            FilePath filePath)
-            throws IOException, InterruptedException {
-
-
-        ArgumentListBuilder cmd = new ArgumentListBuilder();
-        cmd.add("lsbl");
-        cmd.add("-fmt");
-        cmd.add("\"%[component]p\"");
-        cmd.add(baseLineWithPVOB);
-
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        clearToolLauncher.run(cmd.toCommandArray(), null, baos, filePath);
-        baos.close();
-
-        String componentName = baos.toString();
-        return componentName;
-    }
-
-
     @SuppressWarnings("unused")
     public synchronized void doSubmit(StaplerRequest req, StaplerResponse resp) throws IOException, ServletException, InterruptedException {
 
@@ -219,8 +101,7 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
     public void process() {
         SCM scm = project.getScm();
         if (scm instanceof ClearCaseUcmSCM) {
-            ClearCaseUcmSCM clearCaseUcmSCM = (ClearCaseUcmSCM) scm;
-            new TagWorkerThread(clearCaseUcmSCM).start();
+            new TagWorkerThread().start();
         }
     }
 
@@ -230,11 +111,8 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
     public final class TagWorkerThread extends TaskThread {
 
 
-        private final ClearCaseUcmSCM clearCaseUcmSCM;
-
-        public TagWorkerThread(ClearCaseUcmSCM clearCaseUcmSCM) {
+        public TagWorkerThread() {
             super(ClearcaseReleaseLatestBaselineAction.this, ListenerAndText.forMemory());
-            this.clearCaseUcmSCM = clearCaseUcmSCM;
         }
 
         @Override
@@ -243,74 +121,8 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
 
                 Run owner = getOwner();
 
-                listener.getLogger().println("Performing the release of the latest baselines");
-
-                String streamWithPVOB = clearCaseUcmSCM.getStream();
-                String pvob = streamWithPVOB;
-                if (pvob.contains("@" + File.separator)) {
-                    pvob = pvob.substring(pvob.indexOf("@" + File.separator) + 2, pvob.length());
-                }
-
-                Launcher launcher = new Launcher.LocalLauncher(listener);
-                HudsonClearToolLauncher clearToolLauncher = getHudsonClearToolLauncher(listener, launcher);
-
-                //Get all the latest baselines
-                List<String> latestBaselines = getLatestBaselines(streamWithPVOB, clearToolLauncher, workspaceRoot);
-                listener.getLogger().println("");
-
-                //Get the read/write components
-                List<String> modComps = getModComponentsFromStream(streamWithPVOB, clearToolLauncher, workspaceRoot);
-                listener.getLogger().println("");
-
-                //Filtering
-                List<String> keepBaselines = new ArrayList<String>();
-                for (String latestBaseline : latestBaselines) {
-
-                    //Retrieve the component of the baseline
-                    String comp = getComponentFromBaseline(latestBaseline, clearToolLauncher, workspaceRoot);
-                    listener.getLogger().println("");
-
-                    //Keep on the a modifiable component
-                    if (modComps.contains(comp)) {
-                        keepBaselines.add(latestBaseline);
-                    }
-                }
-
-                if (keepBaselines.size() == 0) {
-                    listener.getLogger().println("There is not baseline to promote to RELEASE");
-                    //reset the worker thread
-                    workerThread = null;
-                    return;
-                }
-
-                //Promotion to RELEASED all the latest baseline on modifiable component
-                StringBuffer latestBls = new StringBuffer();
-                for (String latestBaselineWithPVOB : keepBaselines) {
-                    String status=(customReleasePromotionLevel==null)?BASELINE_PROMOTION_LEVEL.RELEASED.getLevel():customReleasePromotionLevel;
-                    changeLevelBaseline(latestBaselineWithPVOB, status, clearToolLauncher, workspaceRoot);
-                    listener.getLogger().println("");
-                    latestBls.append(";");
-                    latestBls.append(latestBaselineWithPVOB);
-                }
-                if (latestBls.length() != 0) {
-                    latestBls.delete(0, 1);
-                }
-
-                //Add a badge icon
-                String latestBaselinesReleaseDescription = "The latest baseline has been released";
-                ClearcaseReleaseBuildBadgeAction releaseBuildBadgeAction = new ClearcaseReleaseBuildBadgeAction(latestBaselinesReleaseDescription);
-                owner.addAction(releaseBuildBadgeAction);
-
-                ArrayList<ParameterValue> parameters = new ArrayList<ParameterValue>();
-                parameters.add(new StringParameterValue("LATEST_BASELINE", latestBls.toString()));
-                owner.addAction(new ParametersAction(parameters));
-
-
-                //Add a cancel action
-                owner.addAction(new ClearcaseReleaseCancelAction(owner, project, workspaceRoot, releaseBuildBadgeAction, keepBaselines));
-
-                // Keep the build
-                owner.keepLog();
+                //Process release latest baselines
+                peformLatestBaselineRelease(listener, project, owner, customReleasePromotionLevel);
 
                 //Save the the build information
                 owner.save();
@@ -318,9 +130,12 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
             } catch (Throwable e) {
                 listener.getLogger().println("[ERROR] - " + e.getMessage());
             }
+            finally {
+                //reset the worker thread
+                workerThread = null;
+            }
 
-            //reset the worker thread
-            workerThread = null;
+
         }
     }
 

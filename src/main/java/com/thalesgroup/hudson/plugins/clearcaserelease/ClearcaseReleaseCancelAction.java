@@ -24,13 +24,11 @@
 package com.thalesgroup.hudson.plugins.clearcaserelease;
 
 import hudson.FilePath;
-import hudson.Launcher;
 import hudson.model.AbstractProject;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.TaskThread;
 import hudson.plugins.clearcase.ClearCaseUcmSCM;
-import hudson.plugins.clearcase.HudsonClearToolLauncher;
 import hudson.scm.SCM;
 import hudson.security.ACL;
 import org.kohsuke.stapler.StaplerRequest;
@@ -125,35 +123,24 @@ public class ClearcaseReleaseCancelAction extends ClearcaseReleaseAction {
         @Override
         protected void perform(TaskListener listener) {
             try {
-                listener.getLogger().println("\nClearcase release cancel preforming");
-                Launcher launcher = new Launcher.LocalLauncher(listener);
-                HudsonClearToolLauncher clearToolLauncher = getHudsonClearToolLauncher(listener, launcher);
 
-                //Cancel the release baseline
-                for (String promotedBaseline : promotedBaselines) {
-                    changeLevelBaseline(promotedBaseline, BASELINE_PROMOTION_LEVEL.BUILT.getLevel(), clearToolLauncher, workspaceRoot);
-                    listener.getLogger().println("");
-                }
-
-                //Remove the badge action
-                owner.getActions().remove(releaseBuildBadgeAction);
-
-                //Remove itself the cancel release action
-                owner.getActions().remove(ClearcaseReleaseCancelAction.this);
-
-                //Unlock the owner
-                owner.keepLog(false);
+                //Perform cancellation
+                performCancelRelease(listener, owner, releaseBuildBadgeAction, ClearcaseReleaseCancelAction.this, promotedBaselines);
 
                 //Save the build
                 owner.save();
 
             }
             catch (Throwable e) {
+
                 listener.getLogger().println("[ERROR]- " + e.getMessage());
             }
+            finally {
 
-            //reset the worker thread
-            workerThread = null;
+                //reset the worker thread
+                workerThread = null;
+
+            }
         }
     }
 }

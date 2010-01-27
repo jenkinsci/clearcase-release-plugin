@@ -27,82 +27,68 @@ import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.Action;
 import hudson.model.BuildListener;
-import hudson.tasks.BuildWrapper;
-import hudson.tasks.BuildWrapperDescriptor;
+import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.Publisher;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
 
+import com.thalesgroup.hudson.plugins.clearcaserelease.biz.ClearcaseReleaseActionImpl;
 
-/**
- * Wraps the build by adding a clearcase release build action
- * and a clearcase release project action
- */
-public class ClearcaseReleaseBuildWrapper extends BuildWrapper {
 
-    private String customReleasePromotionLevel;
+public class ClearcaseReleaseCompositeBaselinePublisher extends ClearcaseReleasePublisher {
+
 
     @DataBoundConstructor
-    public ClearcaseReleaseBuildWrapper(String customReleasePromotionLevel) {
-        if (customReleasePromotionLevel != null && customReleasePromotionLevel.trim().length() == 0) {
-            this.customReleasePromotionLevel = null;
-        } else {
-            this.customReleasePromotionLevel = customReleasePromotionLevel;
-        }
+    public ClearcaseReleaseCompositeBaselinePublisher(String customReleasePromotionLevel) {
+        super(customReleasePromotionLevel);
     }
 
     @Override
-    public Action getProjectAction(AbstractProject job) {
-        return new ClearcaseReleaseLatestBaselineAction(job, customReleasePromotionLevel);
+    public CRLatestBaselinePublisherDescriptor getDescriptor() {
+        return DESCRIPTOR;
     }
+
 
     @Override
-    public DescriptorImpl getDescriptor() {
-        return (DescriptorImpl) super.getDescriptor();
+    public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
+
+        new ClearcaseReleaseActionImpl(build.getWorkspace()).peformCompoisteBaselineRelease(listener, build, getCustomReleasePromotionLevel());
+                        
+        return true;
     }
-
-    @Override
-    public Environment setUp(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
-
-        build.addAction(new ClearcaseReleaseCompositeBaselineAction(build, customReleasePromotionLevel));
-        return new Environment() {
-        };
-    }
-
 
     @Extension
-    public static class DescriptorImpl extends BuildWrapperDescriptor {
+    public static final CRLatestBaselinePublisherDescriptor DESCRIPTOR = new CRLatestBaselinePublisherDescriptor();
 
-        public DescriptorImpl() {
-            super(ClearcaseReleaseBuildWrapper.class);
+
+    public static final class CRLatestBaselinePublisherDescriptor extends BuildStepDescriptor<Publisher> {
+
+
+        public CRLatestBaselinePublisherDescriptor() {
+            super(ClearcaseReleaseCompositeBaselinePublisher.class);
             load();
         }
 
-        @Override
-        public boolean isApplicable(AbstractProject<?, ?> item) {
+        public boolean isApplicable(Class<? extends AbstractProject> jobType) {
             return true;
         }
 
         @Override
         public String getDisplayName() {
-            return Messages.Wrapper_DisplayName();
+            return Messages.ClearcaseReleaseCompositeBaselinePublisher_displayName();
         }
 
-                @Override
+        @Override
         public final String getHelpFile() {
-            return getPluginRoot() + "helpCRWrapper.html";
+            return getPluginRoot() + "helpCRCompositeBaseline.html";
         }
 
         public String getPluginRoot() {
             return "/plugin/clearcase-release/";
         }
-    }
 
 
-    @SuppressWarnings("unused")
-    public String getCustomReleasePromotionLevel() {
-        return customReleasePromotionLevel;
     }
 }

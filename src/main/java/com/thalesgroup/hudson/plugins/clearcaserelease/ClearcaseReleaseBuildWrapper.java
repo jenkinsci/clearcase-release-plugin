@@ -29,6 +29,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Action;
 import hudson.model.BuildListener;
+import hudson.plugins.clearcase.ucm.UcmMakeBaselineComposite;
 import hudson.tasks.BuildWrapper;
 import hudson.tasks.BuildWrapperDescriptor;
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -66,9 +67,12 @@ public class ClearcaseReleaseBuildWrapper extends BuildWrapper {
     @Override
     public Environment setUp(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, InterruptedException {
 
-        build.addAction(new ClearcaseReleaseCompositeBaselineAction(build, customReleasePromotionLevel));
-        return new Environment() {
-        };
+        UcmMakeBaselineComposite composite = (UcmMakeBaselineComposite) build.getProject().getPublishersList().get(hudson.plugins.clearcase.ucm.UcmMakeBaselineComposite.class);
+        if (composite != null) {
+            build.addAction(new ClearcaseReleaseCompositeBaselineAction(build, customReleasePromotionLevel));
+        }
+
+        return new Environment(){};
     }
 
 
@@ -90,7 +94,7 @@ public class ClearcaseReleaseBuildWrapper extends BuildWrapper {
             return Messages.Wrapper_DisplayName();
         }
 
-                @Override
+        @Override
         public final String getHelpFile() {
             return getPluginRoot() + "helpCRWrapper.html";
         }

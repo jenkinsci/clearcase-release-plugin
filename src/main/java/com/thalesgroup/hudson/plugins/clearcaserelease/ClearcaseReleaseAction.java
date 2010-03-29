@@ -99,7 +99,7 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
      * @throws InterruptedException
      */
     public void performClearcaseReleaseCompisteBaseline(TaskListener listener, AbstractBuild owner, String customReleasePromotionLevel) throws IOException, InterruptedException {
-        new ClearcaseReleaseActionImpl(workspaceRoot).peformCompoisteBaselineRelease(listener, owner, customReleasePromotionLevel);
+        new ClearcaseReleaseActionImpl(workspaceRoot).performCompoisteBaselineRelease(listener, owner, customReleasePromotionLevel);
     }
 
 
@@ -136,12 +136,12 @@ public abstract class ClearcaseReleaseAction extends TaskAction {
      * @throws IOException
      * @throws InterruptedException
      */
-    public void peformLatestBaselineRelease(TaskListener listener,
+    public void performLatestBaselineRelease(TaskListener listener,
                                             AbstractProject project,
                                             Run owner,
                                             String customReleasePromotionLevel) throws IOException, InterruptedException {
 
-        new ClearcaseReleaseActionImpl(workspaceRoot).peformLatestBaselineRelease(
+        new ClearcaseReleaseActionImpl(workspaceRoot).performLatestBaselineRelease(
                 listener, project, owner,
                 customReleasePromotionLevel);
     }

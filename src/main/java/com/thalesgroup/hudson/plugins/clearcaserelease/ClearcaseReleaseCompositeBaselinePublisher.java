@@ -54,7 +54,7 @@ public class ClearcaseReleaseCompositeBaselinePublisher extends ClearcaseRelease
     @Override
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
 
-        new ClearcaseReleaseActionImpl(build.getWorkspace()).peformCompoisteBaselineRelease(listener, build, getCustomReleasePromotionLevel());
+        new ClearcaseReleaseActionImpl(build.getWorkspace()).performCompoisteBaselineRelease(listener, build, getCustomReleasePromotionLevel());
                         
         return true;
     }

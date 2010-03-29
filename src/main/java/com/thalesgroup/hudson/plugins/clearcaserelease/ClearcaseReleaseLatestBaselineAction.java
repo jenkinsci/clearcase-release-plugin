@@ -122,7 +122,7 @@ public class ClearcaseReleaseLatestBaselineAction extends ClearcaseReleaseAction
                 Run owner = getOwner();
 
                 //Process release latest baselines
-                peformLatestBaselineRelease(listener, project, owner, customReleasePromotionLevel);
+                performLatestBaselineRelease(listener, project, owner, customReleasePromotionLevel);
 
                 //Save the the build information
                 owner.save();

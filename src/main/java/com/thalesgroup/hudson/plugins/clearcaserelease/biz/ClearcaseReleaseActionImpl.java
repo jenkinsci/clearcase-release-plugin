@@ -258,7 +258,7 @@ public class ClearcaseReleaseActionImpl {
     }
 
 
-    public void peformCompoisteBaselineRelease(TaskListener listener, AbstractBuild owner, String customReleasePromotionLevel) throws IOException, InterruptedException {
+    public void performCompoisteBaselineRelease(TaskListener listener, AbstractBuild owner, String customReleasePromotionLevel) throws IOException, InterruptedException {
         listener.getLogger().println("\nClearcase release preforming");
         Launcher launcher = new Launcher.LocalLauncher(listener);
         HudsonClearToolLauncher clearToolLauncher = getHudsonClearToolLauncher(listener, launcher);
@@ -334,7 +334,7 @@ public class ClearcaseReleaseActionImpl {
         owner.keepLog(false);
     }
 
-    public void peformLatestBaselineRelease(TaskListener listener,
+    public void performLatestBaselineRelease(TaskListener listener,
                                             AbstractProject project,
                                             Run owner,
                                             String customReleasePromotionLevel) throws IOException, InterruptedException {

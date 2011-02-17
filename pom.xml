@@ -10,7 +10,7 @@
     <artifactId>clearcase-release</artifactId>
     <packaging>hpi</packaging>
     <name>Jenkins ClearCase Release Plugin</name>
-    <version>0.3-SNAPSHOT</version>
+    <version>0.3</version>
     <url>http://wiki.jenkins-ci.org/display/JENKINS/ClearCase+Release+Plugin</url>
     <licenses>
         <license>
@@ -47,4 +47,10 @@
         </plugins>
 
     </build>
+
+  <scm>
+    <connection>scm:svn:https://svn.jenkins-ci.org/tags/clearcase-release-0.3</connection>
+    <developerConnection>scm:svn:https://svn.jenkins-ci.org/tags/clearcase-release-0.3</developerConnection>
+    <url>http://fisheye.jenkins-ci.org/browse/Hudson/tags/clearcase-release-0.3</url>
+  </scm>
 </project>

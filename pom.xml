@@ -9,9 +9,9 @@
 
     <artifactId>clearcase-release</artifactId>
     <packaging>hpi</packaging>
-    <name>Hudson ClearCase Release Plug-in</name>
-    <version>0.2</version>
-    <url>http://wiki.hudson-ci.org/display/HUDSON/ClearCase+Release+Plugin</url>
+    <name>Jenkins ClearCase Release Plugin</name>
+    <version>0.3-SNAPSHOT</version>
+    <url>http://wiki.jenkins-ci.org/display/JENKINS/ClearCase+Release+Plugin</url>
     <licenses>
         <license>
             <name>MIT license</name>

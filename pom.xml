@@ -36,15 +36,6 @@
         </dependency>
     </dependencies>
 
-    <scm>
-        <connection>scm:svn:https://gbois@svn.java.net/svn/hudson~svn/tags/clearcase-release-0.2
-        </connection>
-        <developerConnection>scm:svn:https://svn.java.net/svn/hudson~svn/tags/clearcase-release-0.2
-        </developerConnection>
-        <url>https://hudson.dev.java.net/source/browse/hudson/tags/clearcase-release-0.2</url>
-    </scm>
-
-
     <build>
         <plugins>
             <plugin>
